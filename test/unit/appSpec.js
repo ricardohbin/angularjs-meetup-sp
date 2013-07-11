@@ -1,10 +1,10 @@
 describe("Testing my app with angular and jasmine", function () {
-    var $scope = {}, location = '';
+    var $scope = {};
 
     describe("Main controller", function () {
         beforeEach(function () { //injecting every time
             module("MyApp");
-            inject(function (_$controller_, _$rootScope_, _$location_) {
+            inject(function (_$controller_, _$rootScope_) {
                 $scope = _$rootScope_.$new();
                 _$controller_("Main", { $scope: $scope }); 
             });
@@ -28,9 +28,9 @@ describe("Testing my app with angular and jasmine", function () {
         });
 
         it("should checks using other way to injection", inject(function (_SomeService_) {
-            spyOn(_SomeService_, 'toUpper').andReturn(10);
+            spyOn(_SomeService_, 'toUpper').andReturn(10); //mocking service! This is an UNIT test
             $scope.setName("ok");
-            expect($scope.name).toBe(10); //hhmmmm.... bad...
+            expect($scope.name).toBe(10); 
         }));
         
 
@@ -41,24 +41,40 @@ describe("Testing my app with angular and jasmine", function () {
             expect($scope.name).toBe('')
         }));
 
+        it("should mock jquery ajax", function () {
+            window.$ = { ajax: function (){} }; //mocking jquery! we dont have it!
+            spyOn(window.$, "ajax");
+            $scope.jquery();
+            expect($.ajax).toHaveBeenCalled();
+        });
+
         describe("ajax services", function () {
             var httpExpect;
+            
+            beforeEach(inject(function (_$httpBackend_) {
+                httpExpect = _$httpBackend_.expect("POST", "/some/url");
+            }));
 
-            it("should request ajax and set isSaved state", inject(function (_$httpBackend_) {
-                _$httpBackend_.expect("POST", "/some/url").respond(200, { info: "Saved!" });
+            afterEach(inject(function (_$httpBackend_) {
+                _$httpBackend_.verifyNoOutstandingExpectation();
+                _$httpBackend_.verifyNoOutstandingRequest();
+            }));
+
+            it("should request ajax and set data", inject(function (_$httpBackend_) {
+                httpExpect.respond(200, { info: "Saved!" });
                 $scope.send();
                 _$httpBackend_.flush();
-                expect($scope.data).toEqual({info: "Saved!"}); //fail?
+                expect($scope.data).toEqual({info: "Saved!"});
             }));
 
             it("should ajax fails", inject(function (_$httpBackend_) {
-                _$httpBackend_.expect("POST", "/some/url").respond(500, 'blablabla');
+                httpExpect.respond(500, 'blablabla');
                 spyOn($scope, 'clean');
                 $scope.send();
                 _$httpBackend_.flush();
                 expect($scope.status.isWaiting).toBeTruthy();
                 expect($scope.clean).toHaveBeenCalledWith('blablabla');
-}));
+            }));
         });
     });
 });
